@@ -42,18 +42,11 @@ Column {.sidebar}
 -----------------------------------------------------------------------
 
 ```{r}
-# sliderInput widget
-min_temp = noaa %>% 
-  filter(!is.na(tmin)) %>% 
-  distinct(tmin) %>% 
-  min()
-max_temp = noaa %>% 
-  filter(!is.na(tmax)) %>% 
-  distinct(tmax) %>% 
-  max()
+# selectInput widget
+year_choice = noaa %>% distinct(year) %>% pull()
 
-sliderInput("temperature_range", label = h3("Choose Temperature Range"), min = min_temp, 
-        max = max_temp, value = c(-41.7, 40))
+selectInput("year_choice", label = h3("Select Year"),
+            choices = year_choice, selected = "1981")
 
 # radioButtons widget
 month_choice = noaa %>% 
@@ -65,11 +58,21 @@ radioButtons("month_choice", label = h3("Choose Month"),
     choices = month_choice, 
     selected = "month")
 
-# selectInput widget
-year_choice = noaa %>% distinct(year) %>% pull()
+# sliderInput widget
+min_days = noaa %>% 
+  filter(!is.na(tmax),
+         tmax > 35) %>% 
+  count(tmax) %>% 
+  min()
+max_days = noaa %>% 
+  filter(!is.na(tmax),
+         tmax > 35) %>% 
+  count(tmax) %>% 
+  max()
 
-selectInput("year_choice", label = h3("Select Year"),
-            choices = year_choice, selected = "1981")
+sliderInput("day_range", label = h3("Choose Range of Days Above 35 Degrees C"), 
+            min = min_days, 
+            max = max_days, value = c(1, 103))
 ```
 
 Row
@@ -119,7 +122,7 @@ renderPlotly({noaa %>%
 ### Number of Days above 35 degrees C (95 degrees F) across New York State
 
 ```{r}
-renderPlotly({noaa %>% 
+renderPlotly({noaa %>%
   group_by(year, month, day) %>% 
   summarize(tmax_day = max(tmax, na.rm = TRUE)) %>%
   filter(tmax_day > 35) %>% 
