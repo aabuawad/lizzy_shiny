@@ -20,7 +20,7 @@ library(devtools)
 
 ```{r read}
 #Read and clean data
-noaa <- read_csv("./nynoaadat.csv")
+noaa <- read_csv("./nynoaadat.csv") #used a subset sample of 50 unique id's from dataset
 
 noaa <-  noaa %>% 
   clean_names() %>% 
@@ -28,7 +28,8 @@ noaa <-  noaa %>%
   separate(date, c("year", "month", "day"), sep = "-") %>% 
   mutate(tmin = tmin / 10,
     tmax = tmax / 10,
-    prcp = prcp / 10)
+    prcp = prcp / 10,
+    rained = ifelse(prcp > 0, "Yes", "No"),) 
 
 noaa_year_stats <- noaa %>% 
   group_by(year) %>% 
@@ -42,37 +43,36 @@ Column {.sidebar}
 -----------------------------------------------------------------------
 
 ```{r}
-# selectInput widget
-year_choice = noaa %>% distinct(year) %>% pull()
-
-selectInput("year_choice", label = h3("Select Year"),
-            choices = year_choice, selected = "1981")
-
 # radioButtons widget
-month_choice = noaa %>% 
-  distinct(month) %>% 
-  mutate(month = month.name) %>% 
+rain_choice = noaa %>%
+  distinct(rained) %>% 
+  drop_na() %>% 
   pull()
 
-radioButtons("month_choice", label = h3("Choose Month"),
-    choices = month_choice, 
-    selected = "month")
+radioButtons("rain_choice", label = h3("Did it rain during those days?"),
+    choices = rain_choice, 
+    selected = "No")
+
+# selectInput widget
+station_choice = noaa %>% distinct(id) %>% pull()
+
+selectInput("station_choice", label = h3("Select Station"),
+            choices = station_choice, selected = "US1NYOS0001")
 
 # sliderInput widget
-min_days = noaa %>% 
+min_temp = noaa %>% 
   filter(!is.na(tmax),
          tmax > 35) %>% 
-  count(tmax) %>% 
+  distinct(tmax) %>% 
   min()
-max_days = noaa %>% 
+max_temp = noaa %>% 
   filter(!is.na(tmax),
          tmax > 35) %>% 
-  count(tmax) %>% 
+  distinct(tmax) %>% 
   max()
 
-sliderInput("day_range", label = h3("Choose Range of Days Above 35 Degrees C"), 
-            min = min_days, 
-            max = max_days, value = c(1, 103))
+sliderInput("temp_range", label = h3("Select Temperature Range"), 
+            min = min_temp, max = max_temp, value = c(35, 40))
 ```
 
 Row
@@ -81,7 +81,8 @@ Row
 ### Average Maximum Temperature in New York State
 
 ```{r}
-renderPlotly({noaa %>% 
+renderPlotly({noaa %>%
+  filter(rained == input$rain_choice) %>% 
   group_by(year) %>% 
   summarise(ave_max = round(mean(tmax, na.rm = TRUE), 2),
             range = round(max(tmax, na.rm = TRUE) - min(tmax, na.rm = TRUE), 2)) %>%
@@ -107,6 +108,7 @@ Row {.tabset .tabset-fade}
 
 ```{r}
 renderPlotly({noaa %>% 
+  filter(id == input$station_choice) %>% 
   filter(!is.na(prcp)) %>% 
   group_by(year) %>% 
   summarise(ave_rain = round(mean(prcp, na.rm = TRUE), 2)) %>%
@@ -123,6 +125,7 @@ renderPlotly({noaa %>%
 
 ```{r}
 renderPlotly({noaa %>%
+  filter(tmax %in% input$temp_range[1]:input$temp_range[2]) %>% 
   group_by(year, month, day) %>% 
   summarize(tmax_day = max(tmax, na.rm = TRUE)) %>%
   filter(tmax_day > 35) %>% 
@@ -141,4 +144,5 @@ renderPlotly({noaa %>%
         yaxis = list(title = "Number of Days above 35 degrees C"))
  })
 ```
+
 
