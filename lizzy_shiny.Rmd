@@ -56,11 +56,14 @@ sliderInput("temperature_range", label = h3("Choose Temperature Range"), min = m
         max = max_temp, value = c(-41.7, 40))
 
 # radioButtons widget
-year_choice = noaa %>% distinct(year) %>% pull()
+month_choice = noaa %>% 
+  distinct(month) %>% 
+  mutate(month = month.name) %>% 
+  pull()
 
-checkboxGroupInput("year_choice", label = h3("Choose Year Range"),
-    choices = year_choice, 
-    selected = "five_years")
+radioButtons("month_choice", label = h3("Choose Month"),
+    choices = month_choice, 
+    selected = "month")
 
 # selectInput widget
 year_choice = noaa %>% distinct(year) %>% pull()
